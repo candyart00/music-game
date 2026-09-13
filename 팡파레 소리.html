@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>마지막 페이지</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #fdfdfd;
+            font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .container {
+            border: 20px solid #FFD700;
+            border-radius: 40px;
+            padding: 50px 80px;
+            text-align: center;
+            background-color: white;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            transition: transform 0.1s;
+            position: relative;
+        }
+        /* 드럼 및 폭죽 기호 장식 */
+        .decorations {
+            font-size: 4.5em;
+            margin-bottom: 20px;
+        }
+        img {
+            max-width: 500px;
+            height: auto;
+            margin-bottom: 30px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        h1 {
+            font-size: 6em;
+            color: #222;
+            margin: 0 0 20px 0;
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+        }
+        h2 {
+            font-size: 4.5em;
+            color: #444;
+            margin: 0;
+        }
+        .animate-pop {
+            animation: pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+        }
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+    <div class="container" id="content-container">
+        <!-- 드럼 및 폭죽 이미지(이모지) 추가 -->
+        <div class="decorations">🥁 🎉 🎆 🎉 🥁</div>
+        
+        <img src="watermarked_img_17441236208214845409.png" alt="캐릭터" onerror="this.style.display='none'">
+        <h1>모두 멋져요!</h1>
+        <h2>다음 시간에 또 만나요</h2>
+    </div>
+
+    <script>
+        // 브라우저 내장 오디오(Web Audio API)를 사용하여 파일 없이 소리 생성
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+
+        // 스네어 드럼 소리 합성 함수
+        function playSnare() {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            gain.gain.setValueAtTime(1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.2);
+        }
+
+        // 팡파레 소리 합성 함수
+        function playFanfare() {
+            // 도, 미, 솔, 높은도 주파수
+            const notes = [261.63, 329.63, 392.00, 523.25];
+            let startTime = audioCtx.currentTime;
+            
+            notes.forEach((freq, index) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = freq;
+                
+                if (index === notes.length - 1) {
+                    // 마지막 음은 길게 퍼지도록 설정
+                    gain.gain.setValueAtTime(0.2, startTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, startTime + 1.5);
+                    osc.start(startTime);
+                    osc.stop(startTime + 1.5);
+                } else {
+                    // 앞의 세 음은 짧게 연주
+                    gain.gain.setValueAtTime(0.2, startTime);
+                    gain.gain.linearRampToValueAtTime(0, startTime + 0.15);
+                    osc.start(startTime);
+                    osc.stop(startTime + 0.15);
+                    startTime += 0.15;
+                }
+            });
+        }
+
+        document.body.addEventListener('click', function() {
+            // 오디오 컨텍스트 초기화 (사용자 클릭 시 활성화됨)
+            if (!audioCtx) {
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const container = document.getElementById('content-container');
+            
+            // 클릭할 때마다 팝 애니메이션 다시 실행
+            container.classList.remove('animate-pop');
+            void container.offsetWidth; 
+            container.classList.add('animate-pop');
+
+            // 1. 클릭 즉시 짧은 스네어 드럼 소리 발생
+            playSnare();
+
+            // 2. 0.3초 뒤 팡파레 소리와 캔버스 폭죽 효과 발생
+            setTimeout(() => {
+                playFanfare();
+                
+                // 중앙 폭죽
+                confetti({
+                    particleCount: 200,
+                    spread: 120,
+                    origin: { y: 0.6 }
+                });
+
+                // 양옆 2차 폭죽
+                setTimeout(() => {
+                    confetti({ particleCount: 150, angle: 60, spread: 70, origin: { x: 0, y: 0.8 } });
+                    confetti({ particleCount: 150, angle: 120, spread: 70, origin: { x: 1, y: 0.8 } });
+                }, 200);
+            }, 300);
+        });
+    </script>
+
+</body>
+</html>

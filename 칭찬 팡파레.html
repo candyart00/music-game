@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>마지막 페이지</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #fdfdfd;
+            font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .container {
+            border: 20px solid #FFD700; /* 굵은 노란 테두리 */
+            border-radius: 40px;
+            padding: 60px;
+            text-align: center;
+            background-color: white;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            transition: transform 0.1s;
+        }
+        img {
+            max-width: 600px; /* 그림을 아주 크게 */
+            height: auto;
+            margin-bottom: 40px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        h1 {
+            font-size: 6em; /* 글씨를 아주 크게 */
+            color: #222;
+            margin: 0 0 20px 0;
+        }
+        h2 {
+            font-size: 5em; /* 글씨를 아주 크게 */
+            color: #444;
+            margin: 0;
+        }
+        /* 클릭 시 튀어오르는 팝 애니메이션 */
+        .animate-pop {
+            animation: pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+        }
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+    <!-- 화려한 폭죽 효과를 위한 Confetti 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+    <div class="container" id="content-container">
+        <!-- 생성된 귀여운 캐릭터 이미지 -->
+        <img src="watermarked_img_17441236208214845409.png" alt="캐릭터" onerror="this.style.display='none'">
+        <h1>모두 멋져요!</h1>
+        <h2>다음 시간에 또 만나요</h2>
+    </div>
+
+    <script>
+        // 오디오 객체 미리 준비 (같은 폴더에 파일이 있어야 함)
+        const snareAudio = new Audio('snare.mp3');
+        const fanfareAudio = new Audio('fanfare.mp3');
+
+        document.body.addEventListener('click', function() {
+            const container = document.getElementById('content-container');
+            
+            // 애니메이션을 매번 클릭할 때마다 실행하기 위한 초기화
+            container.classList.remove('animate-pop');
+            void container.offsetWidth; // 브라우저 리플로우 강제 발생
+            container.classList.add('animate-pop');
+
+            // 1. 스네어 드럼 소리 즉시 재생
+            snareAudio.currentTime = 0;
+            snareAudio.play().catch(e => console.log("음원 재생 실패 (파일을 확인하세요):", e));
+
+            // 2. 0.5초(500ms) 뒤 팡파레 소리 재생 및 폭죽 애니메이션 시작
+            setTimeout(() => {
+                fanfareAudio.currentTime = 0;
+                fanfareAudio.play().catch(e => console.log("음원 재생 실패 (파일을 확인하세요):", e));
+                
+                // 폭죽 1: 중앙에서 넓게 터짐
+                confetti({
+                    particleCount: 200,
+                    spread: 120,
+                    origin: { y: 0.6 }
+                });
+
+                // 폭죽 2: 약간의 시간차를 두고 양쪽 가장자리에서 쏘아 올림
+                setTimeout(() => {
+                    confetti({
+                        particleCount: 150,
+                        angle: 60,
+                        spread: 70,
+                        origin: { x: 0, y: 0.8 }
+                    });
+                    confetti({
+                        particleCount: 150,
+                        angle: 120,
+                        spread: 70,
+                        origin: { x: 1, y: 0.8 }
+                    });
+                }, 200);
+            }, 500);
+        });
+    </script>
+
+</body>
+</html>
