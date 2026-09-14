@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>산도깨비 리듬게임</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+        }
+
+        #bg-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            z-index: 0;
+            opacity: 0.6;
+        }
+
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            height: 100%;
+            z-index: 10;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 30;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- 동영상 파일 로드 -->
+    <video id="bg-video" src="1000052149.mp4" loop playsinline></video>
+
+    <canvas id="game-canvas"></canvas>
+
+    <!-- 점수, 콤보 및 멈춤 버튼 UI -->
+    <div id="ui-layer" class="p-6 flex justify-between items-start pointer-events-none">
+        <div>
+            <div class="text-white font-bold text-3xl drop-shadow-lg">
+                SCORE: <span id="score-display">0</span>
+            </div>
+            <div class="text-white font-bold text-3xl drop-shadow-lg text-yellow-400 mt-2">
+                COMBO: <span id="combo-display">0</span>
+            </div>
+        </div>
+        <button id="btn-pause" class="hidden pointer-events-auto px-6 py-3 bg-gray-800/80 hover:bg-gray-700 text-white font-bold rounded-lg text-2xl border-2 border-gray-500 transition-all">
+            ⏸ 멈춤
+        </button>
+    </div>
+
+    <!-- 시작 화면 및 난이도 선택 버튼 -->
+    <div id="start-screen">
+        <h1 class="text-5xl font-extrabold text-white mb-8 drop-shadow-2xl text-center leading-tight">
+            산도깨비<br><span class="text-3xl text-indigo-300">리듬게임</span>
+        </h1>
+        <p class="text-white text-2xl mb-8 bg-black/60 p-4 rounded-lg shadow-lg">
+            조작키: <span class="font-bold text-yellow-300">D, F, J, K</span>
+        </p>
+        
+        <div class="flex gap-4 mb-8">
+            <button id="btn-level-1" class="px-6 py-3 bg-green-500 text-white font-bold rounded-lg text-xl border-4 border-white shadow-lg transition-all scale-110">1단계 (쉬움)</button>
+            <button id="btn-level-2" class="px-6 py-3 bg-red-500 text-white font-bold rounded-lg text-xl border-4 border-transparent opacity-60 hover:opacity-100 transition-all">2단계 (어려움)</button>
+        </div>
+
+        <button id="btn-start" class="px-10 py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-full text-2xl transition-all shadow-[0_0_20px_rgba(79,70,229,0.5)] transform hover:scale-105">
+            게임 시작 ▶
+        </button>
+    </div>
+
+    <!-- 일시정지 화면 -->
+    <div id="pause-screen" class="hidden absolute top-0 left-0 w-full h-full bg-black/85 z-40 flex-col justify-center items-center pointer-events-auto">
+        <h2 class="text-5xl font-bold text-white mb-10 drop-shadow-lg">일시정지 중</h2>
+        
+        <!-- 난이도 변경 영역 추가 -->
+        <div class="mb-12 bg-white/10 p-6 rounded-2xl flex flex-col items-center">
+            <p class="text-gray-300 text-xl font-semibold mb-4">난이도 변경</p>
+            <div class="flex gap-4">
+                <button id="pause-btn-level-1" class="px-6 py-3 bg-green-500 text-white font-bold rounded-lg text-xl border-4 border-white shadow-lg transition-all scale-110">1단계 (쉬움)</button>
+                <button id="pause-btn-level-2" class="px-6 py-3 bg-red-500 text-white font-bold rounded-lg text-xl border-4 border-transparent opacity-60 hover:opacity-100 transition-all">2단계 (어려움)</button>
+            </div>
+        </div>
+
+        <div class="flex gap-6">
+            <button id="btn-resume" class="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-full text-2xl transition-all shadow-[0_0_20px_rgba(37,99,235,0.5)] transform hover:scale-105">
+                ▶ 계속하기
+            </button>
+            <button id="btn-restart" class="px-8 py-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-full text-2xl transition-all shadow-[0_0_20px_rgba(220,38,38,0.5)] transform hover:scale-105">
+                🔄 처음부터 다시
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const video = document.getElementById('bg-video');
+        
+        const startScreen = document.getElementById('start-screen');
+        const btnStart = document.getElementById('btn-start');
+        const scoreDisplay = document.getElementById('score-display');
+        const comboDisplay = document.getElementById('combo-display');
+        
+        // 시작 화면의 난이도 버튼
+        const btnLevel1 = document.getElementById('btn-level-1');
+        const btnLevel2 = document.getElementById('btn-level-2');
+        
+        // 일시정지 화면의 난이도 버튼 추가
+        const pauseBtnLevel1 = document.getElementById('pause-btn-level-1');
+        const pauseBtnLevel2 = document.getElementById('pause-btn-level-2');
+        
+        const btnPause = document.getElementById('btn-pause');
+        const pauseScreen = document.getElementById('pause-screen');
+        const btnResume = document.getElementById('btn-resume');
+        const btnRestart = document.getElementById('btn-restart');
+
+        let isPlaying = false;
+        let isPaused = false;
+        let currentLevel = 1;
+        let score = 0;
+        let combo = 0;
+        
+        const CANVAS_WIDTH = 540; 
+        let CANVAS_HEIGHT = window.innerHeight;
+        
+        function resizeCanvas() {
+            CANVAS_HEIGHT = window.innerHeight;
+            canvas.width = CANVAS_WIDTH;
+            canvas.height = CANVAS_HEIGHT;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const keys = ['d', 'f', 'j', 'k'];
+        const laneCount = 4;
+        const laneWidth = CANVAS_WIDTH / laneCount;
+        const targetY = CANVAS_HEIGHT - 150; 
+        
+        let SPEED_MULTIPLIER = 180; 
+        const START_OFFSET = 3.0; 
+
+        let notes = [];
+        let particles = [];
+        let hitEffects = [];
+        let keysPressed = { 0: false, 1: false, 2: false, 3: false };
+
+        btnLevel1.addEventListener('click', () => setLevel(1));
+        btnLevel2.addEventListener('click', () => setLevel(2));
+        
+        // 일시정지 중 난이도 변경 이벤트 (isMidGame = true 전달)
+        pauseBtnLevel1.addEventListener('click', () => setLevel(1, true));
+        pauseBtnLevel2.addEventListener('click', () => setLevel(2, true));
+
+        function setLevel(level, isMidGame = false) {
+            currentLevel = level;
+            
+            // 공통 클래스 정의
+            const activeLevel1 = "px-6 py-3 bg-green-500 text-white font-bold rounded-lg text-xl border-4 border-white shadow-lg transition-all scale-110";
+            const inactiveLevel1 = "px-6 py-3 bg-green-500 text-white font-bold rounded-lg text-xl border-4 border-transparent opacity-60 hover:opacity-100 transition-all";
+            
+            const activeLevel2 = "px-6 py-3 bg-red-500 text-white font-bold rounded-lg text-xl border-4 border-white shadow-lg transition-all scale-110";
+            const inactiveLevel2 = "px-6 py-3 bg-red-500 text-white font-bold rounded-lg text-xl border-4 border-transparent opacity-60 hover:opacity-100 transition-all";
+
+            // 시작 화면과 일시정지 화면의 버튼 스타일을 동기화
+            if (level === 1) {
+                btnLevel1.className = activeLevel1;
+                btnLevel2.className = inactiveLevel2;
+                pauseBtnLevel1.className = activeLevel1;
+                pauseBtnLevel2.className = inactiveLevel2;
+            } else {
+                btnLevel1.className = inactiveLevel1;
+                btnLevel2.className = activeLevel2;
+                pauseBtnLevel1.className = inactiveLevel1;
+                pauseBtnLevel2.className = activeLevel2;
+            }
+
+            // 게임 진행 중에 난이도를 변경했다면, 현재 시점 이후의 노트들을 새로 생성
+            if (isMidGame) {
+                generateNotes(video.currentTime);
+            }
+        }
+
+        // startTime 매개변수 추가 (기본값 0): 중간에 난이도를 변경해도 그 시간 이후의 노트만 갱신하기 위함
+        function generateNotes(startTime = 0) {
+            notes = [];
+            const totalDuration = 200; 
+            const beatDuration = 60 / 150; 
+
+            if (currentLevel === 1) {
+                const interval = beatDuration * 3; 
+                SPEED_MULTIPLIER = 150; 
+
+                for (let t = START_OFFSET; t <= totalDuration; t += interval) {
+                    // 지정된 시작 시간(startTime) 이전의 노트는 생성하지 않음
+                    if (t < startTime) continue;
+
+                    let lane = Math.floor(Math.random() * 4); 
+                    let color = (lane === 1 || lane === 2) ? '#60A5FA' : '#F87171'; 
+                    
+                    notes.push({
+                        lane: lane,
+                        hitTime: t, 
+                        active: true,
+                        color: color,
+                        y: -50,
+                        width: laneWidth,
+                        height: 25 
+                    });
+                }
+            } else {
+                const interval = beatDuration * 2; 
+                SPEED_MULTIPLIER = 200; 
+
+                for (let t = START_OFFSET; t <= totalDuration; t += interval) {
+                    if (t < startTime) continue;
+
+                    let numNotes = Math.random() > 0.7 ? 2 : 1; 
+                    let selectedLanes = [];
+                    
+                    while(selectedLanes.length < numNotes) {
+                        let r = Math.floor(Math.random() * 4);
+                        if(!selectedLanes.includes(r)) {
+                            selectedLanes.push(r);
+                        }
+                    }
+
+                    selectedLanes.forEach(lane => {
+                        let color = (lane === 1 || lane === 2) ? '#60A5FA' : '#F87171'; 
+                        notes.push({
+                            lane: lane,
+                            hitTime: t, 
+                            active: true,
+                            color: color,
+                            y: -50,
+                            width: laneWidth,
+                            height: 20
+                        });
+                    });
+                }
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y; this.color = color;
+                this.size = Math.random() * 8 + 4;
+                this.speedX = Math.random() * 8 - 4;
+                this.speedY = Math.random() * -8 - 2;
+                this.life = 1.0;
+            }
+            update() { this.x += this.speedX; this.y += this.speedY; this.life -= 0.04; }
+            draw() {
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        class HitText {
+            constructor(text, lane, color) {
+                this.text = text;
+                this.x = (lane * laneWidth) + (laneWidth / 2);
+                this.y = targetY - 50;
+                this.color = color;
+                this.life = 1.0;
+                this.scale = 0.5;
+            }
+            update() { this.y -= 1.5; this.life -= 0.03; if(this.scale < 1.3) this.scale += 0.1; }
+            draw() {
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.fillStyle = this.color;
+                ctx.font = `bold ${26 * this.scale}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = 'black';
+                ctx.strokeText(this.text, this.x, this.y);
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isPlaying) {
+                togglePause();
+                return;
+            }
+            if (!isPlaying || isPaused) return;
+
+            const keyIndex = keys.indexOf(e.key.toLowerCase());
+            if (keyIndex !== -1 && !keysPressed[keyIndex]) {
+                keysPressed[keyIndex] = true;
+                checkHit(keyIndex);
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const keyIndex = keys.indexOf(e.key.toLowerCase());
+            if (keyIndex !== -1) keysPressed[keyIndex] = false;
+        });
+
+        function togglePause() {
+            isPaused = !isPaused;
+            if (isPaused) {
+                video.pause(); 
+                pauseScreen.classList.remove('hidden');
+                pauseScreen.classList.add('flex');
+            } else {
+                video.play().catch(e => console.log("재생 오류", e));
+                pauseScreen.classList.add('hidden');
+                pauseScreen.classList.remove('flex');
+                requestAnimationFrame(drawGame);
+            }
+        }
+        
+        btnPause.addEventListener('click', togglePause);
+        btnResume.addEventListener('click', togglePause);
+
+        btnRestart.addEventListener('click', () => {
+            isPaused = false;
+            pauseScreen.classList.add('hidden');
+            pauseScreen.classList.remove('flex');
+            
+            video.currentTime = 0; 
+            score = 0;
+            combo = 0;
+            updateUI();
+            generateNotes(0); 
+            
+            video.play().catch(e => console.log(e));
+            requestAnimationFrame(drawGame);
+        });
+
+        function checkHit(laneIndex) {
+            let currentTime = video.currentTime;
+            let hitNote = null;
+            let closestDiff = Infinity;
+            
+            for (let i = 0; i < notes.length; i++) {
+                let note = notes[i];
+                if (note.lane === laneIndex && note.active) {
+                    let diff = Math.abs(note.hitTime - currentTime);
+                    if (diff < closestDiff && diff < 1.0) { 
+                        closestDiff = diff;
+                        hitNote = note;
+                    }
+                }
+            }
+
+            if (hitNote) {
+                let diff = Math.abs(hitNote.hitTime - currentTime);
+                
+                if (diff < 0.4) { 
+                    score += 100; combo++; hitNote.active = false;
+                    createParticles(laneIndex, hitNote.color);
+                    showHitText('PERFECT!', laneIndex, '#FBBF24');
+                } else if (diff < 0.85) { 
+                    score += 50; combo++; hitNote.active = false;
+                    createParticles(laneIndex, hitNote.color);
+                    showHitText('GOOD', laneIndex, '#4ADE80');
+                } else if (hitNote.hitTime > currentTime) { 
+                    combo = 0; hitNote.active = false;
+                    showHitText('BAD', laneIndex, '#9CA3AF');
+                }
+                updateUI();
+            }
+        }
+
+        function createParticles(lane, color) {
+            const x = (lane * laneWidth) + (laneWidth / 2);
+            for (let i = 0; i < 20; i++) particles.push(new Particle(x, targetY, color));
+        }
+
+        function showHitText(text, lane, color) {
+            hitEffects.push(new HitText(text, lane, color));
+        }
+
+        function updateUI() {
+            scoreDisplay.innerText = score;
+            comboDisplay.innerText = combo;
+        }
+
+        function drawGame() {
+            if (!isPlaying || isPaused) return; 
+
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            let currentTime = video.currentTime; 
+
+            // 레인 및 키 가이드 그리기
+            for (let i = 0; i < laneCount; i++) {
+                // 글씨를 그리면서 변경된 fillStyle을 매 레인마다 초기화해줍니다.
+                if (keysPressed[i]) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'; // 눌렀을 때의 색상
+                } else {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)'; // 평상시(투명한) 색상
+                }
+                ctx.fillRect(i * laneWidth, 0, laneWidth, CANVAS_HEIGHT);
+                
+                ctx.beginPath();
+                ctx.moveTo(i * laneWidth, 0);
+                ctx.lineTo(i * laneWidth, CANVAS_HEIGHT);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // 키보드 글씨
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.font = 'bold 36px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText(keys[i].toUpperCase(), (i * laneWidth) + (laneWidth / 2), CANVAS_HEIGHT - 40);
+            }
+
+            // 판정선 그리기
+            ctx.beginPath();
+            ctx.moveTo(0, targetY);
+            ctx.lineTo(CANVAS_WIDTH, targetY);
+            ctx.strokeStyle = '#FCD34D';
+            ctx.lineWidth = 6;
+            ctx.stroke();
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#FCD34D';
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // 노트 그리기
+            for (let i = notes.length - 1; i >= 0; i--) {
+                let note = notes[i];
+                if (!note.active) continue;
+
+                note.y = targetY - (note.hitTime - currentTime) * SPEED_MULTIPLIER;
+
+                if (note.y > -100 && note.y < CANVAS_HEIGHT + 100) {
+                    let gradient = ctx.createLinearGradient(note.lane * laneWidth, note.y, note.lane * laneWidth, note.y + note.height);
+                    gradient.addColorStop(0, '#FFF');
+                    gradient.addColorStop(1, note.color);
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = note.color;
+                    ctx.fillRect((note.lane * laneWidth) + 6, note.y, note.width - 12, note.height);
+                    ctx.shadowBlur = 0;
+                }
+
+                // 놓친 노트 처리
+                if (note.hitTime < currentTime - 0.7 && note.active) {
+                    note.active = false;
+                    combo = 0;
+                    updateUI();
+                    showHitText('MISS', note.lane, '#9CA3AF');
+                }
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
+
+            for (let i = hitEffects.length - 1; i >= 0; i--) {
+                hitEffects[i].update();
+                hitEffects[i].draw();
+                if (hitEffects[i].life <= 0) hitEffects.splice(i, 1);
+            }
+
+            requestAnimationFrame(drawGame);
+        }
+
+        // 게임 시작 버튼 클릭
+        btnStart.addEventListener('click', () => {
+            startScreen.style.display = 'none';
+            btnPause.classList.remove('hidden'); 
+
+            video.currentTime = 0;
+            video.volume = 0.5;
+            video.play().catch(e => console.log("비디오 재생 오류:", e));
+
+            isPlaying = true;
+            isPaused = false;
+            score = 0;
+            combo = 0;
+            updateUI();
+            
+            generateNotes(0); 
+            drawGame();
+        });
+        
+    </script>
+</body>
+</html>
