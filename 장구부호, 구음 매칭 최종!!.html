@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>장구 구음 맞추기</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Confetti (폭죽) 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #fdfbf7; /* 따뜻하고 화사한 상아색 배경 */
+            /* 은은한 전통 격자/창살 무늬 패턴 */
+            background-image: 
+                linear-gradient(45deg, rgba(200, 180, 150, 0.05) 25%, transparent 25%, transparent 75%, rgba(200, 180, 150, 0.05) 75%, rgba(200, 180, 150, 0.05)), 
+                linear-gradient(45deg, rgba(200, 180, 150, 0.05) 25%, transparent 25%, transparent 75%, rgba(200, 180, 150, 0.05) 75%, rgba(200, 180, 150, 0.05));
+            background-size: 60px 60px;
+            background-position: 0 0, 30px 30px;
+            margin: 0;
+            overflow: hidden;
+            touch-action: none; /* 모바일에서 드래그 시 화면 넘어감 방지 */
+        }
+
+        /* 배경 중앙에 은은하게 깔리는 장구 실루엣 */
+        .bg-janggu-silhouette {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70vmin;
+            height: 70vmin;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M25,15 C40,15 45,45 50,50 C55,45 60,15 75,15 L75,85 C60,85 55,55 50,50 C45,55 40,85 25,85 Z" fill="%23d4a373" opacity="0.1"/></svg>') no-repeat center center;
+            background-size: contain;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .node-btn {
+            position: relative;
+            z-index: 10;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        .node-btn:active {
+            transform: scale(0.95);
+        }
+
+        .node-btn.matched {
+            pointer-events: none;
+            opacity: 0.9;
+            transform: scale(0.96);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.5); /* 매칭 성공 시 초록색 글로우 */
+        }
+
+        /* 우측 부호 버튼용 글래스모피즘 스타일 */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 2px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* 부호 SVG 스타일 - 검정색으로 통일 */
+        .symbol-svg {
+            width: 60px;
+            height: 60px;
+            stroke-width: 5;
+            fill: none;
+            stroke: #000000; /* 요구사항: 검정색 */
+            stroke-linecap: round;
+            pointer-events: none;
+        }
+
+        .node-content {
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col items-center justify-center relative">
+
+    <div class="bg-janggu-silhouette"></div>
+
+    <div class="text-center z-10 mb-6 mt-4 pt-4 flex flex-col items-center">
+        <h1 class="text-3xl md:text-5xl font-black text-orange-600 drop-shadow-sm mb-3 tracking-wide flex items-center justify-center gap-3">
+            <!-- 세련된 장구 아이콘 -->
+            <svg viewBox="0 0 100 100" class="w-10 h-10 md:w-14 md:h-14 inline-block drop-shadow-md">
+                <path d="M25,20 C40,20 45,45 50,50 C55,45 60,20 75,20 L75,80 C60,80 55,55 50,50 C45,55 40,80 25,80 Z" fill="#fed7aa" stroke="#c2410c" stroke-width="4" stroke-linejoin="round"/>
+                <line x1="25" y1="20" x2="75" y2="80" stroke="#fdba74" stroke-width="2"/>
+                <line x1="75" y1="20" x2="25" y2="80" stroke="#fdba74" stroke-width="2"/>
+                <line x1="25" y1="20" x2="25" y2="80" stroke="#9a3412" stroke-width="6" stroke-linecap="round"/>
+                <line x1="75" y1="20" x2="75" y2="80" stroke="#9a3412" stroke-width="6" stroke-linecap="round"/>
+                <circle cx="50" cy="50" r="8" fill="#ea580c"/>
+            </svg>
+            장구 구음 맞추기
+        </h1>
+        <p class="text-orange-900 text-base md:text-lg font-medium bg-white/70 border border-white inline-block px-6 py-2 rounded-full backdrop-blur-md shadow-sm">
+            마우스를 드래그하여 구음과 알맞은 부호를 연결하세요.
+        </p>
+    </div>
+
+    <div id="game-container" class="relative w-full max-w-5xl flex-1 flex justify-between items-center px-8 md:px-16 pb-16">
+        <canvas id="lines-canvas"></canvas>
+
+        <!-- 좌측: 구음 버튼 -->
+        <div id="left-container" class="flex flex-col justify-around h-full py-8 gap-8">
+            <button id="left-1" data-type="left" data-match="right-1" class="node-btn w-28 h-24 md:w-40 md:h-28 bg-blue-500 hover:bg-blue-400 rounded-3xl shadow-[0_6px_0_rgb(29,78,216)] flex items-center justify-center">
+                <span class="node-content text-white text-4xl md:text-5xl font-bold drop-shadow-md">덩</span>
+            </button>
+            <button id="left-2" data-type="left" data-match="right-2" class="node-btn w-28 h-24 md:w-40 md:h-28 bg-blue-500 hover:bg-blue-400 rounded-3xl shadow-[0_6px_0_rgb(29,78,216)] flex items-center justify-center">
+                <span class="node-content text-white text-4xl md:text-5xl font-bold drop-shadow-md">덕</span>
+            </button>
+            <button id="left-3" data-type="left" data-match="right-3" class="node-btn w-28 h-24 md:w-40 md:h-28 bg-blue-500 hover:bg-blue-400 rounded-3xl shadow-[0_6px_0_rgb(29,78,216)] flex items-center justify-center">
+                <span class="node-content text-white text-4xl md:text-5xl font-bold drop-shadow-md">쿵</span>
+            </button>
+        </div>
+
+        <!-- 우측: 부호 버튼 (시작 시 자바스크립트로 섞임) -->
+        <div id="right-container" class="flex flex-col justify-around h-full py-8 gap-8">
+            <!-- 덩 부호: 원 안에 딱 맞는 세로줄 -->
+            <button id="right-1" data-type="right" data-match="left-1" class="node-btn glass-panel w-28 h-24 md:w-40 md:h-28 rounded-3xl flex items-center justify-center">
+                <svg class="symbol-svg" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="35" />
+                    <!-- 선의 y 범위를 15~85로 하여 반지름 35(지름 70, 중심 50) 안에 정확히 맞춤 -->
+                    <line x1="50" y1="15" x2="50" y2="85" />
+                </svg>
+            </button>
+            <!-- 덕 부호: 세로줄 -->
+            <button id="right-2" data-type="right" data-match="left-2" class="node-btn glass-panel w-28 h-24 md:w-40 md:h-28 rounded-3xl flex items-center justify-center">
+                <svg class="symbol-svg" viewBox="0 0 100 100">
+                    <line x1="50" y1="15" x2="50" y2="85" />
+                </svg>
+            </button>
+            <!-- 쿵 부호: 동그라미 -->
+            <button id="right-3" data-type="right" data-match="left-3" class="node-btn glass-panel w-28 h-24 md:w-40 md:h-28 rounded-3xl flex items-center justify-center">
+                <svg class="symbol-svg" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="35" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- 성공 메시지 모달 -->
+    <div id="success-message" class="absolute inset-0 bg-white/70 backdrop-blur-md z-50 flex-col items-center justify-center hidden opacity-0 transition-opacity duration-700">
+        <h2 class="text-6xl md:text-8xl font-black text-orange-600 mb-6 drop-shadow-2xl scale-110 tracking-tight">최고야! 🎉</h2>
+        <p class="text-xl text-gray-700 font-bold mb-10">모든 구음을 완벽하게 맞췄어요!</p>
+        <button onclick="resetGame()" class="px-12 py-5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white text-2xl font-bold rounded-full shadow-[0_10px_25px_rgba(249,115,22,0.4)] transition-transform hover:scale-105 active:scale-95 border-2 border-white">
+            다시 도전하기
+        </button>
+    </div>
+
+    <script>
+        const container = document.getElementById('game-container');
+        const canvas = document.getElementById('lines-canvas');
+        const ctx = canvas.getContext('2d');
+        const rightContainer = document.getElementById('right-container');
+        
+        let nodes = document.querySelectorAll('.node-btn');
+        let isDrawing = false;
+        let startNode = null;
+        let currentMousePos = { x: 0, y: 0 };
+        
+        let connections = [];
+        let tempConnection = null;
+        let matchCount = 0;
+        let isGameFinished = false;
+
+        function playFanfare() {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            
+            const audioCtx = new AudioContext();
+            
+            function playNote(freq, startTime, duration) {
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                osc.type = 'triangle'; // 브라스 느낌의 파형
+                osc.frequency.setValueAtTime(freq, startTime);
+                
+                // 자연스러운 볼륨 조절 (Envelope)
+                gainNode.gain.setValueAtTime(0, startTime);
+                gainNode.gain.linearRampToValueAtTime(0.5, startTime + 0.05); // Attack
+                gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration); // Decay/Release
+                
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                osc.start(startTime);
+                osc.stop(startTime + duration);
+            }
+
+            const now = audioCtx.currentTime;
+            // 화려한 팡파레 멜로디 
+            playNote(261.63, now, 0.15);       // C4
+            playNote(329.63, now + 0.15, 0.15); // E4
+            playNote(392.00, now + 0.3, 0.15);  // G4
+            
+            // 마지막 화음 (길게)
+            playNote(523.25, now + 0.45, 1.2);  // C5
+            playNote(392.00, now + 0.45, 1.2);  // G4
+            playNote(329.63, now + 0.45, 1.2);  // E4
+        }
+
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ko-KR';
+                utterance.rate = 1.1;
+                utterance.pitch = 1.2;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function triggerRealisticFireworks() {
+            const duration = 4 * 1000;
+            const animationEnd = Date.now() + duration;
+            // 폭죽 색상 세트
+            const defaults = { startVelocity: 35, spread: 360, ticks: 70, zIndex: 100, colors: ['#f97316', '#3b82f6', '#facc15', '#ef4444', '#10b981'] };
+
+            function randomInRange(min, max) {
+                return Math.random() * (max - min) + min;
+            }
+
+            const interval = setInterval(function() {
+                const timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval);
+                }
+
+                const particleCount = 60 * (timeLeft / duration);
+                
+                // 화면 양쪽에서 다발로 터지는 효과
+                confetti(Object.assign({}, defaults, { 
+                    particleCount, 
+                    origin: { x: randomInRange(0.1, 0.4), y: randomInRange(0.2, 0.5) },
+                    scalar: randomInRange(0.8, 1.3)
+                }));
+                confetti(Object.assign({}, defaults, { 
+                    particleCount, 
+                    origin: { x: randomInRange(0.6, 0.9), y: randomInRange(0.2, 0.5) },
+                    scalar: randomInRange(0.8, 1.3)
+                }));
+            }, 300);
+        }
+
+        function shuffleRightNodes() {
+            let nodesArray = Array.from(rightContainer.children);
+            let isStraightLine = true;
+            
+            // "1번-1번, 2번-2번, 3번-3번" 처럼 일직선으로 배치되는 경우를 방지하기 위한 루프
+            while(isStraightLine) {
+                // Fisher-Yates 셔플 알고리즘
+                for (let i = nodesArray.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [nodesArray[i], nodesArray[j]] = [nodesArray[j], nodesArray[i]];
+                }
+                
+                // 초기 순서(right-1, right-2, right-3)와 완벽히 똑같은지 확인
+                isStraightLine = (nodesArray[0].id === 'right-1' && 
+                                  nodesArray[1].id === 'right-2' && 
+                                  nodesArray[2].id === 'right-3');
+            }
+            
+            // 섞인 순서대로 DOM에 다시 추가
+            nodesArray.forEach(node => rightContainer.appendChild(node));
+            
+            // 전체 노드 변수 업데이트
+            nodes = document.querySelectorAll('.node-btn');
+        }
+
+        function resizeCanvas() {
+            const rect = container.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            drawAll();
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        function getNodeCenter(node) {
+            const rect = node.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            return {
+                x: rect.left - containerRect.left + rect.width / 2,
+                y: rect.top - containerRect.top + rect.height / 2
+            };
+        }
+
+        function startDraw(e) {
+            if (this.classList.contains('matched') || isGameFinished) return;
+            
+            isDrawing = true;
+            startNode = this;
+            
+            // 왼쪽 버튼 클릭 시 음성으로 읽어줌
+            if (this.dataset.type === 'left') {
+                const text = this.querySelector('span').innerText;
+                speakText(text);
+            }
+            
+            updateMousePos(e);
+            drawAll();
+        }
+
+        function moveDraw(e) {
+            if (!isDrawing) return;
+            if(e.type === 'touchmove') e.preventDefault(); 
+            
+            updateMousePos(e);
+            drawAll();
+        }
+
+        function endDraw(e) {
+            if (!isDrawing) return;
+            isDrawing = false;
+
+            let clientX, clientY;
+            if (e.type === 'touchend') {
+                const touch = e.changedTouches[0];
+                clientX = touch.clientX;
+                clientY = touch.clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            const targetElement = document.elementFromPoint(clientX, clientY);
+            const endNode = targetElement ? targetElement.closest('.node-btn') : null;
+
+            if (endNode && endNode !== startNode && !endNode.classList.contains('matched')) {
+                if (startNode.dataset.type !== endNode.dataset.type) {
+                    checkMatch(startNode, endNode);
+                }
+            }
+
+            startNode = null;
+            drawAll();
+        }
+
+        function updateMousePos(e) {
+            let clientX, clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            
+            const containerRect = container.getBoundingClientRect();
+            currentMousePos = {
+                x: clientX - containerRect.left,
+                y: clientY - containerRect.top
+            };
+        }
+
+        function checkMatch(nodeA, nodeB) {
+            const isMatch = nodeA.dataset.match === nodeB.id || nodeB.dataset.match === nodeA.id;
+
+            if (isMatch) {
+                nodeA.classList.add('matched');
+                nodeB.classList.add('matched');
+                connections.push({
+                    start: nodeA,
+                    end: nodeB,
+                    color: '#22c55e' // 성공 시 초록색 선
+                });
+                matchCount++;
+                
+                if(matchCount === 3) {
+                    isGameFinished = true;
+                    setTimeout(showSuccess, 400);
+                }
+            } else {
+                // 오답일 경우 임시로 빨간색 선을 보여준 후 삭제
+                tempConnection = {
+                    start: nodeA,
+                    end: nodeB,
+                    color: '#ef4444'
+                };
+                
+                setTimeout(() => {
+                    tempConnection = null;
+                    drawAll();
+                }, 400);
+            }
+        }
+
+        function drawAll() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            // 정답 고정선 (초록)
+            connections.forEach(conn => {
+                const p1 = getNodeCenter(conn.start);
+                const p2 = getNodeCenter(conn.end);
+                drawLine(p1, p2, conn.color, true);
+            });
+
+            // 오답 임시선 (빨강)
+            if (tempConnection) {
+                const p1 = getNodeCenter(tempConnection.start);
+                const p2 = getNodeCenter(tempConnection.end);
+                drawLine(p1, p2, tempConnection.color, false);
+            }
+
+            // 마우스/터치로 드래그 중인 선 (회색 점선)
+            if (isDrawing && startNode) {
+                const startPos = getNodeCenter(startNode);
+                ctx.setLineDash([12, 12]);
+                drawLine(startPos, currentMousePos, '#94a3b8', false);
+                ctx.setLineDash([]);
+            }
+        }
+
+        function drawLine(p1, p2, color, addGlow) {
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            
+            if(addGlow) {
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 10;
+                ctx.lineWidth = 8;
+            } else {
+                ctx.shadowBlur = 0;
+                ctx.lineWidth = 6;
+            }
+            
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = color;
+            ctx.stroke();
+            
+            ctx.shadowBlur = 0;
+        }
+
+        function showSuccess() {
+            // 최고야 TTS + 팡파레 재생 + 폭죽 애니메이션
+            speakText("최고야!");
+            playFanfare();
+            triggerRealisticFireworks();
+
+            const msg = document.getElementById('success-message');
+            msg.classList.remove('hidden');
+            msg.style.display = 'flex';
+            
+            // 트랜지션을 위한 약간의 딜레이
+            void msg.offsetWidth; 
+            msg.classList.remove('opacity-0');
+            msg.classList.add('opacity-100');
+        }
+
+        function resetGame() {
+            connections = [];
+            tempConnection = null;
+            matchCount = 0;
+            isGameFinished = false;
+            
+            nodes.forEach(node => node.classList.remove('matched'));
+            
+            const msg = document.getElementById('success-message');
+            msg.classList.remove('opacity-100');
+            msg.classList.add('opacity-0');
+            
+            setTimeout(() => {
+                msg.style.display = 'none';
+                msg.classList.add('hidden');
+                initGame();
+            }, 700);
+        }
+
+        function initEvents() {
+            nodes.forEach(node => {
+                node.removeEventListener('mousedown', startDraw);
+                node.removeEventListener('touchstart', startDraw);
+                node.addEventListener('mousedown', startDraw);
+                node.addEventListener('touchstart', startDraw, {passive: false});
+            });
+        }
+
+        function initGame() {
+            shuffleRightNodes(); // 시작 시 위치 섞기
+            resizeCanvas();
+            initEvents();
+        }
+
+        // 마우스 및 터치 이벤트 리스너 등록
+        document.addEventListener('mousemove', moveDraw);
+        document.addEventListener('touchmove', moveDraw, {passive: false});
+        document.addEventListener('mouseup', endDraw);
+        document.addEventListener('touchend', endDraw);
+
+        // 오디오 컨텍스트 정책 대응 (사용자 첫 상호작용 유도)
+        document.body.addEventListener('touchstart', function() {
+            if('speechSynthesis' in window) {
+                let utterance = new SpeechSynthesisUtterance("");
+                window.speechSynthesis.speak(utterance);
+            }
+        }, { once: true });
+
+        // 페이지 로드 완료 시 게임 초기화
+        window.onload = initGame;
+
+    </script>
+</body>
+</html>
