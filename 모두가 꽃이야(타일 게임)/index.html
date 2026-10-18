@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>모두가 꽃이야 - 음악 리듬 게임 1단계</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Jua', sans-serif;
+            background-color: #87CEEB; /* 하늘색 배경 */
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #333;
+        }
+
+        /* 배경 애니메이션 요소 (꽃과 나비) */
+        .background-elements {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* 나비 애니메이션 */
+        .butterfly {
+            position: absolute;
+            top: 20%;
+            left: -100px;
+            width: 60px;
+            animation: fly 15s linear infinite;
+        }
+        .butterfly2 {
+            top: 40%;
+            animation: fly 20s linear infinite 5s;
+            transform: scale(0.8);
+        }
+
+        @keyframes fly {
+            0% { transform: translateX(-100px) translateY(0) rotate(10deg); }
+            25% { transform: translateX(25vw) translateY(-50px) rotate(-10deg); }
+            50% { transform: translateX(50vw) translateY(20px) rotate(10deg); }
+            75% { transform: translateX(75vw) translateY(-30px) rotate(-10deg); }
+            100% { transform: translateX(110vw) translateY(0) rotate(10deg); }
+        }
+
+        /* 바닥 잔디 */
+        .grass {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 120px;
+            background: linear-gradient(to bottom, #7CFC00, #32CD32);
+            border-top-left-radius: 50% 20px;
+            border-top-right-radius: 50% 20px;
+        }
+
+        /* 흔들리는 꽃 */
+        .flower {
+            position: absolute;
+            bottom: 30px;
+            width: 50px;
+            transform-origin: bottom center;
+            animation: sway 3s ease-in-out infinite alternate;
+        }
+        .flower:nth-child(1) { left: 10%; animation-delay: 0s; }
+        .flower:nth-child(2) { left: 85%; animation-delay: 1s; }
+        .flower:nth-child(3) { left: 20%; animation-delay: 0.5s; transform: scale(0.8); }
+        .flower:nth-child(4) { left: 75%; animation-delay: 1.5s; transform: scale(1.2); }
+
+        @keyframes sway {
+            0% { transform: rotate(-15deg); }
+            100% { transform: rotate(15deg); }
+        }
+
+        /* 게임 보드 */
+        #game-board {
+            position: relative;
+            width: 480px;
+            height: 80vh;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            z-index: 10;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            border: 4px solid #FF69B4;
+        }
+
+        /* 시작 화면 UI */
+        #start-screen {
+            position: relative;
+            width: 480px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 20;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: 4px solid #FFB6C1;
+        }
+
+        h1 {
+            color: #FF1493;
+            margin-bottom: 20px;
+            font-size: 32px;
+        }
+        
+        p {
+            margin-bottom: 20px;
+            font-size: 18px;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        .upload-btn-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            border: 2px solid #FF69B4;
+            color: white;
+            background-color: #FF69B4;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 20px;
+            font-weight: bold;
+            font-family: 'Jua', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #FF1493;
+            transform: scale(1.05);
+        }
+
+        .upload-btn-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        #file-name {
+            display: block;
+            margin-bottom: 20px;
+            font-size: 16px;
+            color: #FF1493;
+        }
+
+        /* 게임 내부 요소 */
+        .tracks {
+            display: flex;
+            flex: 1;
+            position: relative;
+        }
+
+        .track {
+            flex: 1;
+            border-right: 1px dashed #FFC0CB;
+            position: relative;
+        }
+        .track:last-child {
+            border-right: none;
+        }
+
+        .key-label {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: #FF1493;
+            z-index: 5;
+        }
+
+        /* 판정선 */
+        .hit-line {
+            position: absolute;
+            bottom: 80px; /* 판정 위치 */
+            width: 100%;
+            height: 10px;
+            background-color: rgba(255, 105, 180, 0.5);
+            box-shadow: 0 0 10px #FF69B4;
+            z-index: 2;
+        }
+
+        /* 떨어지는 타일 */
+        .tile {
+            position: absolute;
+            width: 80%;
+            height: 40px;
+            left: 10%;
+            background: linear-gradient(to bottom, #FFB6C1, #FF69B4);
+            border-radius: 20px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+            z-index: 3;
+        }
+
+        /* UI 정보 (점수 등) */
+        .top-ui {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 20px;
+            background: #FFF0F5;
+            border-bottom: 2px solid #FFC0CB;
+            font-size: 24px;
+            font-weight: bold;
+            color: #FF1493;
+        }
+
+        /* 피드백 효과 (최고예요!) */
+        #feedback {
+            position: absolute;
+            top: 40%;
+            width: 100%;
+            text-align: center;
+            font-size: 40px;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+            opacity: 0;
+            z-index: 15;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+
+        /* 키 누를 때 빛나는 효과 */
+        .track.active {
+            background: linear-gradient(to top, rgba(255, 105, 180, 0.3), transparent);
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 배경 장식 (CSS + SVG) -->
+    <div class="background-elements">
+        <!-- 나비 1 -->
+        <svg class="butterfly" viewBox="0 0 100 100">
+            <path d="M50 50 C 20 20, 0 40, 20 60 C 40 80, 50 50, 50 50 Z" fill="#FFB6C1" />
+            <path d="M50 50 C 80 20, 100 40, 80 60 C 60 80, 50 50, 50 50 Z" fill="#FF69B4" />
+            <circle cx="50" cy="50" r="5" fill="#333" />
+        </svg>
+        <!-- 나비 2 -->
+        <svg class="butterfly butterfly2" viewBox="0 0 100 100">
+            <path d="M50 50 C 20 20, 0 40, 20 60 C 40 80, 50 50, 50 50 Z" fill="#FFE4E1" />
+            <path d="M50 50 C 80 20, 100 40, 80 60 C 60 80, 50 50, 50 50 Z" fill="#FFC0CB" />
+            <circle cx="50" cy="50" r="5" fill="#333" />
+        </svg>
+
+        <div class="grass"></div>
+
+        <!-- 꽃들 -->
+        <svg class="flower" viewBox="0 0 100 120">
+            <rect x="47" y="50" width="6" height="70" fill="#228B22" />
+            <circle cx="50" cy="30" r="20" fill="#FFA500" />
+            <circle cx="30" cy="15" r="15" fill="#FFF" />
+            <circle cx="70" cy="15" r="15" fill="#FFF" />
+            <circle cx="20" cy="40" r="15" fill="#FFF" />
+            <circle cx="80" cy="40" r="15" fill="#FFF" />
+            <circle cx="50" cy="60" r="15" fill="#FFF" />
+        </svg>
+        <svg class="flower" viewBox="0 0 100 120">
+            <rect x="47" y="50" width="6" height="70" fill="#228B22" />
+            <circle cx="50" cy="30" r="20" fill="#FF69B4" />
+            <circle cx="30" cy="15" r="15" fill="#FFC0CB" />
+            <circle cx="70" cy="15" r="15" fill="#FFC0CB" />
+            <circle cx="20" cy="40" r="15" fill="#FFC0CB" />
+            <circle cx="80" cy="40" r="15" fill="#FFC0CB" />
+            <circle cx="50" cy="60" r="15" fill="#FFC0CB" />
+        </svg>
+        <svg class="flower" viewBox="0 0 100 120">
+            <rect x="47" y="50" width="6" height="70" fill="#228B22" />
+            <circle cx="50" cy="30" r="20" fill="#FFFF00" />
+            <circle cx="30" cy="15" r="15" fill="#FFF" />
+            <circle cx="70" cy="15" r="15" fill="#FFF" />
+            <circle cx="20" cy="40" r="15" fill="#FFF" />
+            <circle cx="80" cy="40" r="15" fill="#FFF" />
+            <circle cx="50" cy="60" r="15" fill="#FFF" />
+        </svg>
+        <svg class="flower" viewBox="0 0 100 120">
+            <rect x="47" y="50" width="6" height="70" fill="#228B22" />
+            <circle cx="50" cy="30" r="20" fill="#FF4500" />
+            <circle cx="30" cy="15" r="15" fill="#FFA07A" />
+            <circle cx="70" cy="15" r="15" fill="#FFA07A" />
+            <circle cx="20" cy="40" r="15" fill="#FFA07A" />
+            <circle cx="80" cy="40" r="15" fill="#FFA07A" />
+            <circle cx="50" cy="60" r="15" fill="#FFA07A" />
+        </svg>
+    </div>
+
+    <!-- 시작 화면 -->
+    <div id="start-screen">
+        <h1>모두가 꽃이야</h1>
+        <p>1단계: 한 마디(2박)에 하나씩 타일이 떨어집니다.<br>박자에 맞춰 <strong>D, F, J, K</strong> 키를 눌러주세요!</p>
+        
+        <div class="upload-btn-wrapper">
+            <button class="btn">음원(mp3) 파일 선택하기</button>
+            <input type="file" id="audio-upload" accept="audio/mp3, audio/wav, audio/m4a" />
+        </div>
+        <span id="file-name">파일이 선택되지 않았습니다.</span>
+        <br>
+        <button class="btn" id="start-btn" style="display: none; background-color: #32CD32; border-color: #32CD32;">게임 시작!</button>
+    </div>
+
+    <!-- 게임 화면 -->
+    <div id="game-board">
+        <div class="top-ui">
+            <div>점수: <span id="score-display">0</span></div>
+            <div>콤보: <span id="combo-display">0</span></div>
+        </div>
+        
+        <div id="feedback">최고예요!</div>
+
+        <div class="tracks">
+            <div class="hit-line"></div>
+            
+            <div class="track" id="track-0">
+                <div class="key-label">D</div>
+            </div>
+            <div class="track" id="track-1">
+                <div class="key-label">F</div>
+            </div>
+            <div class="track" id="track-2">
+                <div class="key-label">J</div>
+            </div>
+            <div class="track" id="track-3">
+                <div class="key-label">K</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 게임 설정 값 ---
+        const BPM = 57; // 모두가 꽃이야 BPM
+        // 6/8박자에서 1마디는 점4분음표 2개(2박). 
+        // 1박(점4분음표)의 시간 = 60초 / 57 = 약 1.052초
+        // 1단계는 1마디에 1개씩 떨어지므로 간격은 2박(약 2.105초)
+        const BEAT_DURATION = 60 / BPM; 
+        const MEASURE_DURATION = BEAT_DURATION * 2; 
+
+        const DROP_TIME = 2.0; // 타일이 화면 꼭대기에서 판정선까지 떨어지는 시간 (초)
+        const HIT_WINDOW = 0.2; // 판정 허용 시간 오차 (초) - 아이들을 위해 넉넉하게 설정
+
+        const KEYS = ['d', 'f', 'j', 'k']; // 4개 라인 키 설정
+        
+        // --- 상태 변수 ---
+        let audioContext;
+        let audioBuffer;
+        let audioSource;
+        let startTime;
+        
+        let tiles = [];
+        let score = 0;
+        let combo = 0;
+        let isPlaying = false;
+        let animationFrameId;
+
+        // DOM 요소
+        const fileInput = document.getElementById('audio-upload');
+        const fileNameDisplay = document.getElementById('file-name');
+        const startBtn = document.getElementById('start-btn');
+        const startScreen = document.getElementById('start-screen');
+        const gameBoard = document.getElementById('game-board');
+        const scoreDisplay = document.getElementById('score-display');
+        const comboDisplay = document.getElementById('combo-display');
+        const feedbackDisplay = document.getElementById('feedback');
+
+        // 1. 파일 업로드 처리
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                fileNameDisplay.innerText = "선택된 파일: " + file.name;
+                startBtn.style.display = "inline-block"; // 파일 선택 후 시작 버튼 표시
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const arrayBuffer = e.target.result;
+                    // AudioContext 초기화 (최신 브라우저 정책 대응)
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // mp3 데이터를 오디오 버퍼로 디코딩
+                    audioContext.decodeAudioData(arrayBuffer, function(buffer) {
+                        audioBuffer = buffer;
+                        fileNameDisplay.innerText = "음원 준비 완료! 시작 버튼을 누르세요.";
+                    }, function(e) {
+                        alert("음원을 읽는 데 실패했습니다. 다른 파일을 시도해주세요.");
+                    });
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+
+        // 2. 게임 시작
+        startBtn.addEventListener('click', function() {
+            if (!audioBuffer) return;
+
+            startScreen.style.display = 'none';
+            gameBoard.style.display = 'flex';
+
+            startGame();
+        });
+
+        // 3. 타일 데이터 생성 및 음악 재생
+        function startGame() {
+            score = 0;
+            combo = 0;
+            updateScoreUI();
+            
+            // 노래 길이에 맞춰 타일 생성 (1단계: 1마디에 1개)
+            const songDuration = audioBuffer.duration;
+            const totalMeasures = Math.floor(songDuration / MEASURE_DURATION);
+            
+            // 넉넉한 시작을 위해 음악 재생 전 1초 대기 후 시작
+            const leadInTime = 1.0; 
+            
+            for (let i = 1; i < totalMeasures; i++) {
+                // i번째 마디의 첫 박에 타일 생성
+                let targetTime = leadInTime + (i * MEASURE_DURATION);
+                let randomTrack = Math.floor(Math.random() * 4); // 0, 1, 2, 3 중 하나
+                
+                // 타일 DOM 요소 생성
+                let tileEl = document.createElement('div');
+                tileEl.className = 'tile';
+                document.getElementById(`track-${randomTrack}`).appendChild(tileEl);
+                
+                tiles.push({
+                    track: randomTrack,
+                    targetTime: targetTime,
+                    element: tileEl,
+                    isHit: false
+                });
+            }
+
+            // 오디오 소스 연결 및 재생
+            audioSource = audioContext.createBufferSource();
+            audioSource.buffer = audioBuffer;
+            audioSource.connect(audioContext.destination);
+            
+            // 현재 시간 기록 및 재생 (leadInTime 이후에 음악 시작)
+            startTime = audioContext.currentTime;
+            audioSource.start(startTime + leadInTime);
+            isPlaying = true;
+
+            // 게임 루프 시작
+            gameLoop();
+        }
+
+        // 4. 게임 루프 (애니메이션 및 타일 위치 계산)
+        function gameLoop() {
+            if (!isPlaying) return;
+
+            let currentTime = audioContext.currentTime - startTime;
+            
+            // 판정선 위치 (track 높이 기준 하단 80px)
+            const trackHeight = document.querySelector('.track').offsetHeight;
+            const hitLineY = trackHeight - 80 - 40; // 40은 타일 높이
+
+            tiles.forEach((tile, index) => {
+                if (tile.isHit) return;
+
+                let timeUntilHit = tile.targetTime - currentTime;
+
+                // 타일이 떨어지기 시작해야 할 시간(DROP_TIME) 이내에 들어오면 화면에 표시
+                if (timeUntilHit <= DROP_TIME && timeUntilHit > -HIT_WINDOW) {
+                    // 진행도 계산 (0: 맨 위, 1: 판정선)
+                    let progress = 1 - (timeUntilHit / DROP_TIME);
+                    let currentY = progress * hitLineY;
+                    
+                    tile.element.style.top = currentY + 'px';
+                } 
+                // 타일이 화면 밖으로 벗어난 경우 (놓침)
+                else if (timeUntilHit <= -HIT_WINDOW) {
+                    tile.isHit = true; // 처리됨 상태로 변경
+                    tile.element.style.display = 'none'; // 화면에서 숨김
+                    combo = 0; // 콤보 초기화
+                    showFeedback("아까워요!", "#808080");
+                    updateScoreUI();
+                }
+            });
+
+            // 음악이 끝나면 게임 종료
+            if (currentTime > audioBuffer.duration + 2) {
+                isPlaying = false;
+                alert(`게임 종료! 최종 점수는 ${score}점 입니다.`);
+                location.reload(); // 새로고침하여 초기화
+            }
+
+            if (isPlaying) {
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // 5. 키보드 입력 처리 (판정 로직)
+        document.addEventListener('keydown', (e) => {
+            if (!isPlaying) return;
+            
+            let key = e.key.toLowerCase();
+            let trackIndex = KEYS.indexOf(key);
+            
+            if (trackIndex !== -1) {
+                // 시각적 피드백 (트랙 빛남)
+                let trackEl = document.getElementById(`track-${trackIndex}`);
+                trackEl.classList.add('active');
+                setTimeout(() => trackEl.classList.remove('active'), 100);
+
+                let currentTime = audioContext.currentTime - startTime;
+
+                // 해당 트랙에서 아직 처리되지 않은 첫 번째 타일 찾기
+                let targetTile = tiles.find(t => t.track === trackIndex && !t.isHit && t.targetTime - currentTime < DROP_TIME);
+
+                if (targetTile) {
+                    let timeDiff = Math.abs(targetTile.targetTime - currentTime);
+
+                    if (timeDiff <= HIT_WINDOW) {
+                        // 명중 (Perfect)
+                        targetTile.isHit = true;
+                        targetTile.element.style.display = 'none'; // 타일 제거
+                        score += 100;
+                        combo += 1;
+                        showFeedback("최고예요!", "#FFD700");
+                        updateScoreUI();
+                    }
+                }
+            }
+        });
+
+        // UI 업데이트
+        function updateScoreUI() {
+            scoreDisplay.innerText = score;
+            comboDisplay.innerText = combo;
+        }
+
+        // 칭찬 피드백 애니메이션
+        function showFeedback(text, color) {
+            feedbackDisplay.innerText = text;
+            feedbackDisplay.style.color = color;
+            feedbackDisplay.style.opacity = '1';
+            feedbackDisplay.style.transform = 'scale(1.2)';
+            
+            setTimeout(() => {
+                feedbackDisplay.style.opacity = '0';
+                feedbackDisplay.style.transform = 'scale(1)';
+            }, 500);
+        }
+
+    </script>
+</body>
+</html>
