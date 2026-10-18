@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>음악 평가</title>
+  
+  
+  
+  
+  <style>
+    * { font-family: 'Jua', sans-serif; }
+    @keyframes float-up-down { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
+    @keyframes shimmer { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    @keyframes shake { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes bounce-gentle { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-30px); } }
+    @keyframes spin-soft { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes bounce-in { 0% { transform: scale(0.3); opacity: 0; } 50% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
+    
+    .character-insung { animation: float-up-down 3s ease-in-out infinite; }
+    .character-dahye { animation: shimmer 2s ease-in-out infinite; }
+    .character-younggwang { animation: shake 1.5s ease-in-out infinite; }
+    .character-hoyoung { animation: bounce-gentle 2s ease-in-out infinite; }
+    .character-yeonseo { animation: spin-soft 4s linear infinite; }
+    
+    .beat-strong { color: #EF4444; font-size: 3.5rem; font-weight: 900; display: inline-block; }
+    .beat-weak { color: #22C55E; font-size: 1.8rem; font-weight: bold; display: inline-block; }
+    .beat-clap-strong { font-size: 3.5rem; display: inline-block; animation: bounce-in 0.4s ease-out; }
+    .beat-clap-weak { font-size: 1.8rem; display: inline-block; animation: bounce-in 0.4s ease-out; }
+    
+    .option-btn { transition: all 0.2s; cursor: pointer; }
+    .option-btn:hover { transform: scale(1.05); }
+    .option-btn:active { transform: scale(0.95); }
+    
+    svg { display: inline-block; vertical-align: middle; }
+    body { box-sizing: border-box; }
+  </style>
+  
+ <style>
+html,body{margin:0;min-height:100%;font-family:"Malgun Gothic",sans-serif}*{box-sizing:border-box}button{font:inherit;cursor:pointer}button:focus-visible{outline:5px solid #2464ee;outline-offset:4px}.hidden{display:none!important}body{background:linear-gradient(135deg,#312e81,#581c87,#831843)}#app{min-height:100vh}#main-screen,#quiz-screen{min-height:100vh;padding:30px;display:flex;flex-direction:column;align-items:center;justify-content:center}#main-title{font-size:clamp(32px,5vw,60px);color:white;text-align:center;margin:20px}#main-screen p{color:#eee;font-size:30px}#main-screen .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;width:min(100%,1000px)}.option-btn{border:3px solid #eab308;border-radius:24px;padding:24px;font-weight:bold;font-size:clamp(26px,3vw,40px);background:#fde047;color:#182033;min-height:96px}#main-screen button:nth-child(2){background:#67e8f9}#main-screen button:nth-child(3){background:#fb923c}#main-screen button:nth-child(4){background:#f472b6}#main-screen button:nth-child(5){background:#c084fc}#quiz-screen{position:relative;padding-right:210px}#quiz-screen>div:nth-child(2){background:white;border:4px solid #9333ea;border-radius:32px;padding:32px;width:min(100%,950px);box-shadow:0 14px 38px #0002}#character{position:absolute;right:20px;font-size:130px!important}#student-name{font-size:34px;color:#7e22ce}#q-number{float:right;font-size:28px;color:#7e22ce}#question-container{margin:22px 0}h2{font-size:clamp(28px,3.4vw,42px);text-align:center;line-height:1.5;margin:15px 0}#options{display:flex;flex-direction:column;gap:18px}#feedback{font-size:36px;text-align:center;margin-top:20px;color:#15803d;font-weight:bold}#next-btn,#home-btn,.small{border:0;border-radius:30px;padding:14px 24px;margin-top:16px;background:#7e22ce;color:white;font-size:24px}#next-btn{background:#15803d}.small{font-size:18px;padding:12px 18px;margin:18px 8px 0 0}.picture{display:block;margin:auto;width:180px;height:130px}.large{font-size:56px}.cue{background:#f3e8ff;border-radius:20px;padding:16px;text-align:center;font-size:40px;margin:15px 0}.good{background:#dcfce7!important;border-color:#15803d!important;color:#14532d!important}.selected{outline:5px solid #2563eb;background:#dbeafe!important}.match-grid{display:grid;grid-template-columns:1fr 40px 1fr;gap:14px;align-items:center}.match-grid button{font-size:36px;padding:16px;min-height:80px}.connector{text-align:center;font-size:30px;color:#15803d}button:disabled{cursor:default;opacity:1}.symbol{font-family:Arial,sans-serif;font-size:72px;line-height:1.1}@media(max-width:850px){#quiz-screen{padding:18px}#character{display:none}#main-screen .grid{grid-template-columns:repeat(2,1fr)}#quiz-screen>div:nth-child(2){padding:20px}.option-btn{padding:16px}}@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+</style></head>
+ <body class="h-full bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+  <div id="app" class="h-full w-full overflow-auto">
+   <div id="main-screen" class="flex flex-col items-center justify-center h-full p-6">
+    <h1 id="main-title" class="text-6xl text-white mb-12 text-center font-bold animate-bounce">🎵 음악 평가 🎵</h1>
+    <p class="text-purple-200 mb-12 text-3xl font-bold">학생을 선택하세요!</p>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-5xl w-full"><button onclick="startQuiz('insung')" class="option-btn bg-yellow-400 text-gray-900 rounded-3xl p-8 text-3xl font-bold shadow-2xl hover:shadow-xl hover:bg-yellow-300">⭐ 인성</button> <button onclick="startQuiz('dahye')" class="option-btn bg-cyan-300 text-gray-900 rounded-3xl p-8 text-3xl font-bold shadow-2xl hover:shadow-xl hover:bg-cyan-200">👑 다혜</button> <button onclick="startQuiz('younggwang')" class="option-btn bg-orange-400 text-gray-900 rounded-3xl p-8 text-3xl font-bold shadow-2xl hover:shadow-xl hover:bg-orange-300">⚡ 영광</button> <button onclick="startQuiz('hoyoung')" class="option-btn bg-pink-400 text-gray-900 rounded-3xl p-8 text-3xl font-bold shadow-2xl hover:shadow-xl hover:bg-pink-300">🐰 호영</button> <button onclick="startQuiz('yeonseo')" class="option-btn bg-purple-400 text-white rounded-3xl p-8 text-3xl font-bold shadow-2xl hover:shadow-xl hover:bg-purple-300">🌸 연서</button>
+    </div>
+   </div>
+   <div id="quiz-screen" class="hidden flex flex-col items-center justify-center h-full p-6 relative">
+    <div id="character" class="absolute right-8 select-none pointer-events-none" style="font-size: 15rem;"></div>
+    <div class="bg-white rounded-4xl p-14 max-w-3xl w-full shadow-2xl border-4 border-purple-600 mr-56">
+     <div class="flex justify-between items-center mb-8"><span id="student-name" class="text-purple-700 text-4xl font-bold"></span> <span id="q-number" class="text-purple-600 text-3xl font-bold bg-purple-200 px-6 py-2 rounded-full"></span>
+     </div>
+     <button class="small" onclick="readQuestion()">🔊 문제 다시 듣기</button> <button class="small" onclick="goHome()">🏠 학생 선택</button><div id="question-container" class="mb-10"></div>
+     <div id="options" class="flex flex-col gap-6"></div>
+     <div role="status" aria-live="polite" id="feedback" class="mt-10 text-center text-5xl hidden font-bold animate-bounce"></div>
+    </div><button id="next-btn" onclick="nextQuestion()" class="hidden mt-8 bg-green-500 text-white px-12 py-5 rounded-full text-3xl hover:bg-green-600 transition font-bold shadow-lg">다음 →</button> <button id="home-btn" onclick="goHome()" class="hidden mt-8 bg-purple-600 text-white px-12 py-5 rounded-full text-3xl hover:bg-purple-700 transition font-bold shadow-lg">🏠 처음으로</button>
+   </div>
+  </div>
+<script>
+// 학생별 두 문제. 다혜는 장구 인지와 구음 순서 선택으로 구성했습니다.
+// 덩은 동그라미 안에 세로줄 하나를 넣은 SVG로 정확하게 표시합니다.
+const symbols={덩:'<svg role="img" aria-label="동그라미 안에 세로줄 하나인 덩 기호" viewBox="0 0 100 100" width="1em" height="1em"><circle cx="50" cy="50" r="39" fill="none" stroke="currentColor" stroke-width="6"/><line x1="50" y1="12" x2="50" y2="88" stroke="currentColor" stroke-width="6"/></svg>',덕:'│',쿵:'○'};
+const janggu='<svg class="picture" role="img" aria-label="장구 그림" viewBox="0 0 240 150"><path d="M45 35 Q120 90 195 35 L195 115 Q120 60 45 115Z" fill="#bd7041" stroke="#5f361d" stroke-width="5"/><ellipse cx="45" cy="75" rx="26" ry="55" fill="#fef3c7" stroke="#754326" stroke-width="6"/><ellipse cx="195" cy="75" rx="26" ry="55" fill="#fef3c7" stroke="#754326" stroke-width="6"/><path d="M50 25L190 125M50 125L190 25M50 45L190 105M50 105L190 45" stroke="#f3dca7" stroke-width="4"/><path d="M13 12L85 32M172 18L228 5" stroke="#744827" stroke-width="6" stroke-linecap="round"/></svg>';
+const butterfly='<svg class="picture" role="img" aria-label="나비 그림" viewBox="0 0 240 150"><path d="M120 75C25 -20 5 98 91 85C33 134 103 156 120 90C137 156 207 134 149 85C235 98 215 -20 120 75" fill="#c084fc" stroke="#7e22ce" stroke-width="4"/><ellipse cx="120" cy="84" rx="7" ry="32" fill="#573256"/><path d="M119 55Q99 23 90 35M123 55Q143 23 152 35" fill="none" stroke="#573256" stroke-width="4"/><circle cx="65" cy="61" r="12" fill="#fde68a"/><circle cx="175" cy="61" r="12" fill="#fde68a"/></svg>';
+const flower='<span class="large" role="img" aria-label="꽃 그림">🌸</span>';
+const O=(html,label)=>({html,label});
+const quizData={
+ insung:{name:'⭐ 인성',character:'🐯',bgColor:'linear-gradient(135deg,#FEF3C7,#FDE68A)',questions:[
+ {q:'이 기호에 맞는 장구 구음은 무엇인가요?',cue:'<span class="symbol">'+symbols.덩+'</span>',say:'이 기호에 맞는 장구 구음은 무엇인가요?',options:[O('덩','덩'),O('덕','덕'),O('쿵','쿵')],answer:0,praise:'잘했어요! 덩입니다.'},
+ {q:'‘쿵’에 맞는 기호를 찾아보세요.',options:[O('<span class="symbol">'+symbols.덕+'</span>','세로 막대 기호'),O('<span class="symbol">'+symbols.쿵+'</span>','동그라미 기호'),O('<span class="symbol">'+symbols.덩+'</span>','동그라미 안에 세로줄 하나인 기호')],answer:1,praise:'잘했어요! 쿵은 동그라미 기호예요.'}]},
+ dahye:{name:'👑 다혜',character:'👑',bgColor:'linear-gradient(135deg,#E0F2FE,#BAE6FD)',questions:[
+ {q:'오늘 연주한 장구를 찾아보세요.',options:[O(janggu+'장구','장구'),O(butterfly+'나비','나비')],answer:0,praise:'잘했어요! 장구예요.'},
+ {q:'보기와 같은 장구 구음을 찾아보세요.',cue:'덩　덕　쿵　덕',say:'덩, 덕, 쿵, 덕. 보기와 같은 장구 구음을 찾아보세요.',options:[O('덩　쿵　덕　덕','덩 쿵 덕 덕'),O('덩　덕　쿵　덕','덩 덕 쿵 덕')],answer:1,praise:'덩, 덕, 쿵, 덕. 잘했어요!'}]},
+ younggwang:{name:'⚡ 영광',character:'⚡',bgColor:'linear-gradient(135deg,#FFEDD5,#FFD7A8)',questions:[
+ {q:'오늘 배운 노래 제목은 무엇인가요?',options:[O('🌸 모두가 꽃이야','모두가 꽃이야'),O('🦋 나비야','나비야')],answer:0,praise:'잘했어요!'},
+ {q:'괄호 안에 맞는 구음은 무엇인가요?',cue:'덩　덕　(　　)　덕',say:'괄호 안에 맞는 구음은 무엇인가요?',options:[O('덩','덩'),O('덕','덕'),O('쿵','쿵')],answer:2,praise:'잘했어요!'}]},
+ hoyoung:{name:'🐰 호영',character:'🐰',bgColor:'linear-gradient(135deg,#FCE7F3,#FBCFE8)',questions:[
+ {q:'부채로 팔랑팔랑 무엇을 표현했나요?',options:[O(butterfly+'나비','나비'),O(janggu+'장구','장구')],answer:0,praise:'참 잘했어요! 나비를 표현했어요.'},
+ {type:'match',q:'같은 글씨끼리 연결해 보세요.',say:'왼쪽 글씨를 누르고, 오른쪽에서 같은 글씨를 눌러 연결해 보세요. 덩, 덕, 쿵, 덕.',cue:'덩　덕　쿵　덕'}]},
+ yeonseo:{name:'🌸 연서',character:'🐰',bgColor:'linear-gradient(135deg,#F3E8FF,#E9D5FF)',questions:[
+ {q:'장구 그림을 눌러보세요.',options:[O(janggu+'장구','장구')],answer:0,praise:'잘했어요! 장구.'},
+ {q:'장구 구음을 눌러보세요.',options:[O('덩　덕　쿵　덕','덩 덕 쿵 덕')],answer:0,praise:'덩, 덕, 쿵, 덕. 잘했어요!'}]}
+};
+let currentStudent=null,currentQ=0,solved=false,matchLeft=null,matched=[],rightWords=[];
+const $=id=>document.getElementById(id);
+let koreanVoice;
+function loadVoices(){if('speechSynthesis' in window)koreanVoice=speechSynthesis.getVoices().find(v=>v.lang.startsWith('ko'));}
+loadVoices();if('speechSynthesis' in window)speechSynthesis.addEventListener('voiceschanged',loadVoices);
+function speak(text){if(!('speechSynthesis' in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='ko-KR';u.rate=.8;if(koreanVoice)u.voice=koreanVoice;speechSynthesis.speak(u);}
+function readQuestion(){const q=quizData[currentStudent].questions[currentQ];speak(q.say||q.q);}
+function startQuiz(id){currentStudent=id;currentQ=0;$('main-screen').classList.add('hidden');$('quiz-screen').classList.remove('hidden');showQuestion();}
+function showQuestion(){const d=quizData[currentStudent],q=d.questions[currentQ];solved=false;matched=[];matchLeft=null;$('student-name').textContent=d.name;$('q-number').textContent=(currentQ+1)+' / 2';['feedback','next-btn','home-btn'].forEach(id=>$(id).classList.add('hidden'));$('app').style.background=d.bgColor;$('character').textContent=d.character;$('character').className='character-'+currentStudent;$('question-container').innerHTML='<h2 tabindex="-1">'+q.q+'</h2>'+(q.cue?'<div class="cue">'+q.cue+'</div>':'');$('options').innerHTML='';if(q.type==='match')renderMatch();else q.options.forEach((o,i)=>{const b=document.createElement('button');b.className='option-btn';b.innerHTML=o.html;b.setAttribute('aria-label',o.label);b.onclick=()=>checkAnswer(i,b);$('options').appendChild(b);});$('question-container').querySelector('h2').focus();readQuestion();}
+function feedback(text,good){$('feedback').classList.remove('hidden');$('feedback').textContent=text;$('feedback').style.color=good?'#15803d':'#a16207';speak(text);}
+function complete(text){solved=true;feedback(text,true);$('options').querySelectorAll('button').forEach(b=>b.disabled=true);$(currentQ===0?'next-btn':'home-btn').classList.remove('hidden');}
+function checkAnswer(i,b){if(solved)return;const q=quizData[currentStudent].questions[currentQ];if(i===q.answer){b.classList.add('good');complete(q.praise);}else{feedback('괜찮아요. 다시 골라보세요.',false);}}
+// 덕이 두 번 나오므로 같은 글씨의 남은 카드 어느 쪽과 연결해도 정답입니다.
+function renderMatch(){const left=['덩','덕','쿵','덕'];rightWords=['쿵','덕','덩','덕'];const grid=document.createElement('div');grid.className='match-grid';left.forEach((word,i)=>{const l=document.createElement('button');l.className='option-btn';l.textContent=word;l.id='left-'+i;l.setAttribute('aria-label','왼쪽 '+(i+1)+'번 '+word);l.onclick=()=>{document.querySelectorAll('.selected').forEach(b=>b.classList.remove('selected'));matchLeft=i;l.classList.add('selected');speak(word);};const a=document.createElement('span');a.className='connector';a.id='line-'+i;const r=document.createElement('button');r.className='option-btn';r.textContent=rightWords[i];r.id='right-'+i;r.setAttribute('aria-label','오른쪽 '+(i+1)+'번 '+rightWords[i]);r.onclick=()=>{if(matchLeft===null){feedback('왼쪽 글씨부터 눌러보세요.',false);return;}const j=matchLeft;if(left[j]===rightWords[i]){matched.push([j,i]);latch(j,i);if(matched.length===4)complete('덩, 덕, 쿵, 덕. 참 잘했어요! 모두 연결했어요.');else feedback('잘했어요! '+left[j]+'. 다음 글씨도 연결해 보세요.',true);}else feedback('같은 글씨를 다시 찾아보세요.',false);};grid.append(l,a,r);});$('options').appendChild(grid);}
+function latch(j,i){$('left-'+j).disabled=true;$('right-'+i).disabled=true;$('left-'+j).classList.remove('selected');$('left-'+j).classList.add('good');$('right-'+i).classList.add('good');$('line-'+j).textContent='✓';matchLeft=null;drawConnections();}
+function drawConnections(){let svg=$('connection-lines');if(!svg){svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.id='connection-lines';svg.setAttribute('aria-hidden','true');Object.assign(svg.style,{position:'absolute',inset:'0',width:'100%',height:'100%',pointerEvents:'none'});const g=document.querySelector('.match-grid');g.style.position='relative';g.appendChild(svg);}svg.replaceChildren();const rect=svg.getBoundingClientRect();matched.forEach(([l,r])=>{const a=$('left-'+l).getBoundingClientRect(),b=$('right-'+r).getBoundingClientRect();const line=document.createElementNS(svg.namespaceURI,'line');Object.entries({x1:a.right-rect.left,y1:a.top+a.height/2-rect.top,x2:b.left-rect.left,y2:b.top+b.height/2-rect.top,stroke:'#15803d','stroke-width':4}).forEach(([k,v])=>line.setAttribute(k,v));svg.appendChild(line);});}
+window.addEventListener('resize',()=>{if($('connection-lines'))drawConnections();});
+function nextQuestion(){if(!solved||currentQ>=1)return;currentQ++;showQuestion();}
+function goHome(){if('speechSynthesis' in window)speechSynthesis.cancel();$('quiz-screen').classList.add('hidden');$('main-screen').classList.remove('hidden');$('app').style.background='';currentStudent=null;}
+</script>
+</body></html>
