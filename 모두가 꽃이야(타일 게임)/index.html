@@ -125,13 +125,6 @@
             line-height: 1.5;
         }
 
-        .upload-btn-wrapper {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
-            margin-bottom: 20px;
-        }
-
         .btn {
             border: 2px solid #FF69B4;
             color: white;
@@ -148,22 +141,6 @@
         .btn:hover {
             background-color: #FF1493;
             transform: scale(1.05);
-        }
-
-        .upload-btn-wrapper input[type=file] {
-            font-size: 100px;
-            position: absolute;
-            left: 0;
-            top: 0;
-            opacity: 0;
-            cursor: pointer;
-        }
-
-        #file-name {
-            display: block;
-            margin-bottom: 20px;
-            font-size: 16px;
-            color: #FF1493;
         }
 
         /* 게임 내부 요소 */
@@ -314,12 +291,7 @@
         <h1>모두가 꽃이야</h1>
         <p>1단계: 한 마디(2박)에 하나씩 타일이 떨어집니다.<br>박자에 맞춰 <strong>D, F, J, K</strong> 키를 눌러주세요!</p>
         
-        <div class="upload-btn-wrapper">
-            <button class="btn">음원(mp3) 파일 선택하기</button>
-            <input type="file" id="audio-upload" accept="audio/mp3, audio/wav, audio/m4a" />
-        </div>
-        <span id="file-name">파일이 선택되지 않았습니다.</span>
-        <br>
+        <div id="loading-msg" style="color: #FF1493; font-size: 18px; margin-bottom: 20px;">음악을 불러오는 중입니다... 잠시만 기다려주세요!</div>
         <button class="btn" id="start-btn" style="display: none; background-color: #32CD32; border-color: #32CD32;">게임 시작!</button>
     </div>
 
@@ -353,16 +325,13 @@
     <script>
         // --- 게임 설정 값 ---
         const BPM = 57; // 모두가 꽃이야 BPM
-        // 6/8박자에서 1마디는 점4분음표 2개(2박). 
-        // 1박(점4분음표)의 시간 = 60초 / 57 = 약 1.052초
-        // 1단계는 1마디에 1개씩 떨어지므로 간격은 2박(약 2.105초)
         const BEAT_DURATION = 60 / BPM; 
         const MEASURE_DURATION = BEAT_DURATION * 2; 
 
-        const DROP_TIME = 2.0; // 타일이 화면 꼭대기에서 판정선까지 떨어지는 시간 (초)
-        const HIT_WINDOW = 0.2; // 판정 허용 시간 오차 (초) - 아이들을 위해 넉넉하게 설정
+        const DROP_TIME = 2.0; 
+        const HIT_WINDOW = 0.2; 
 
-        const KEYS = ['d', 'f', 'j', 'k']; // 4개 라인 키 설정
+        const KEYS = ['d', 'f', 'j', 'k']; 
         
         // --- 상태 변수 ---
         let audioContext;
@@ -377,43 +346,41 @@
         let animationFrameId;
 
         // DOM 요소
-        const fileInput = document.getElementById('audio-upload');
-        const fileNameDisplay = document.getElementById('file-name');
         const startBtn = document.getElementById('start-btn');
         const startScreen = document.getElementById('start-screen');
         const gameBoard = document.getElementById('game-board');
         const scoreDisplay = document.getElementById('score-display');
         const comboDisplay = document.getElementById('combo-display');
         const feedbackDisplay = document.getElementById('feedback');
+        const loadingMsg = document.getElementById('loading-msg');
 
-        // 1. 파일 업로드 처리
-        fileInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                fileNameDisplay.innerText = "선택된 파일: " + file.name;
-                startBtn.style.display = "inline-block"; // 파일 선택 후 시작 버튼 표시
-
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const arrayBuffer = e.target.result;
-                    // AudioContext 초기화 (최신 브라우저 정책 대응)
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    
-                    // mp3 데이터를 오디오 버퍼로 디코딩
-                    audioContext.decodeAudioData(arrayBuffer, function(buffer) {
-                        audioBuffer = buffer;
-                        fileNameDisplay.innerText = "음원 준비 완료! 시작 버튼을 누르세요.";
-                    }, function(e) {
-                        alert("음원을 읽는 데 실패했습니다. 다른 파일을 시도해주세요.");
-                    });
-                };
-                reader.readAsArrayBuffer(file);
-            }
+        // 1. 자동으로 bgm.mp3 파일 불러오기
+        window.addEventListener('load', function() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            fetch('bgm.mp3')
+                .then(response => {
+                    if (!response.ok) throw new Error("음악 파일이 없습니다.");
+                    return response.arrayBuffer();
+                })
+                .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+                .then(buffer => {
+                    audioBuffer = buffer;
+                    loadingMsg.style.display = 'none'; 
+                    startBtn.style.display = "inline-block"; 
+                })
+                .catch(error => {
+                    console.error("음원 로딩 에러:", error);
+                    loadingMsg.innerText = "음원을 불러오는데 실패했습니다.";
+                });
         });
 
         // 2. 게임 시작
         startBtn.addEventListener('click', function() {
             if (!audioBuffer) return;
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
 
             startScreen.style.display = 'none';
             gameBoard.style.display = 'flex';
@@ -427,19 +394,14 @@
             combo = 0;
             updateScoreUI();
             
-            // 노래 길이에 맞춰 타일 생성 (1단계: 1마디에 1개)
             const songDuration = audioBuffer.duration;
             const totalMeasures = Math.floor(songDuration / MEASURE_DURATION);
-            
-            // 넉넉한 시작을 위해 음악 재생 전 1초 대기 후 시작
             const leadInTime = 1.0; 
             
             for (let i = 1; i < totalMeasures; i++) {
-                // i번째 마디의 첫 박에 타일 생성
                 let targetTime = leadInTime + (i * MEASURE_DURATION);
-                let randomTrack = Math.floor(Math.random() * 4); // 0, 1, 2, 3 중 하나
+                let randomTrack = Math.floor(Math.random() * 4); 
                 
-                // 타일 DOM 요소 생성
                 let tileEl = document.createElement('div');
                 tileEl.className = 'tile';
                 document.getElementById(`track-${randomTrack}`).appendChild(tileEl);
@@ -452,17 +414,14 @@
                 });
             }
 
-            // 오디오 소스 연결 및 재생
             audioSource = audioContext.createBufferSource();
             audioSource.buffer = audioBuffer;
             audioSource.connect(audioContext.destination);
             
-            // 현재 시간 기록 및 재생 (leadInTime 이후에 음악 시작)
             startTime = audioContext.currentTime;
             audioSource.start(startTime + leadInTime);
             isPlaying = true;
 
-            // 게임 루프 시작
             gameLoop();
         }
 
@@ -472,38 +431,33 @@
 
             let currentTime = audioContext.currentTime - startTime;
             
-            // 판정선 위치 (track 높이 기준 하단 80px)
             const trackHeight = document.querySelector('.track').offsetHeight;
-            const hitLineY = trackHeight - 80 - 40; // 40은 타일 높이
+            const hitLineY = trackHeight - 80 - 40; 
 
             tiles.forEach((tile, index) => {
                 if (tile.isHit) return;
 
                 let timeUntilHit = tile.targetTime - currentTime;
 
-                // 타일이 떨어지기 시작해야 할 시간(DROP_TIME) 이내에 들어오면 화면에 표시
                 if (timeUntilHit <= DROP_TIME && timeUntilHit > -HIT_WINDOW) {
-                    // 진행도 계산 (0: 맨 위, 1: 판정선)
                     let progress = 1 - (timeUntilHit / DROP_TIME);
                     let currentY = progress * hitLineY;
                     
                     tile.element.style.top = currentY + 'px';
                 } 
-                // 타일이 화면 밖으로 벗어난 경우 (놓침)
                 else if (timeUntilHit <= -HIT_WINDOW) {
-                    tile.isHit = true; // 처리됨 상태로 변경
-                    tile.element.style.display = 'none'; // 화면에서 숨김
-                    combo = 0; // 콤보 초기화
+                    tile.isHit = true; 
+                    tile.element.style.display = 'none'; 
+                    combo = 0; 
                     showFeedback("아까워요!", "#808080");
                     updateScoreUI();
                 }
             });
 
-            // 음악이 끝나면 게임 종료
             if (currentTime > audioBuffer.duration + 2) {
                 isPlaying = false;
                 alert(`게임 종료! 최종 점수는 ${score}점 입니다.`);
-                location.reload(); // 새로고침하여 초기화
+                location.reload(); 
             }
 
             if (isPlaying) {
@@ -519,23 +473,20 @@
             let trackIndex = KEYS.indexOf(key);
             
             if (trackIndex !== -1) {
-                // 시각적 피드백 (트랙 빛남)
                 let trackEl = document.getElementById(`track-${trackIndex}`);
                 trackEl.classList.add('active');
                 setTimeout(() => trackEl.classList.remove('active'), 100);
 
                 let currentTime = audioContext.currentTime - startTime;
 
-                // 해당 트랙에서 아직 처리되지 않은 첫 번째 타일 찾기
                 let targetTile = tiles.find(t => t.track === trackIndex && !t.isHit && t.targetTime - currentTime < DROP_TIME);
 
                 if (targetTile) {
                     let timeDiff = Math.abs(targetTile.targetTime - currentTime);
 
                     if (timeDiff <= HIT_WINDOW) {
-                        // 명중 (Perfect)
                         targetTile.isHit = true;
-                        targetTile.element.style.display = 'none'; // 타일 제거
+                        targetTile.element.style.display = 'none'; 
                         score += 100;
                         combo += 1;
                         showFeedback("최고예요!", "#FFD700");
@@ -545,13 +496,11 @@
             }
         });
 
-        // UI 업데이트
         function updateScoreUI() {
             scoreDisplay.innerText = score;
             comboDisplay.innerText = combo;
         }
 
-        // 칭찬 피드백 애니메이션
         function showFeedback(text, color) {
             feedbackDisplay.innerText = text;
             feedbackDisplay.style.color = color;
@@ -563,7 +512,6 @@
                 feedbackDisplay.style.transform = 'scale(1)';
             }, 500);
         }
-
     </script>
 </body>
 </html>
